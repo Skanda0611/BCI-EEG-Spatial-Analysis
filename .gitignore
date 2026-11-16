@@ -5,3 +5,9 @@ sample_data/
 export_*.png
 .venv/
 .DS_Store
+
+.env
+.env.*.n.streamlit/secrets.toml
+.env
+.env.*
+.streamlit/secrets.toml

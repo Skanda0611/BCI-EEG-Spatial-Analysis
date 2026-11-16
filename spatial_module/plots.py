@@ -10,6 +10,38 @@ from plotly.subplots import make_subplots
 from scipy.interpolate import RBFInterpolator
 from scipy.signal import welch
 
+
+def _style_figure(fig):
+    """Apply a consistent scientific-dashboard style to Plotly figures."""
+    fig.update_layout(
+        paper_bgcolor="#ffffff",
+        plot_bgcolor="#ffffff",
+        font=dict(family="Inter, Segoe UI, sans-serif", color="#24364b", size=12),
+        title_font=dict(family="Inter, Segoe UI, sans-serif", color="#14243a", size=15),
+        legend=dict(font=dict(color="#52647a", size=11)),
+        hoverlabel=dict(
+            bgcolor="#14243a",
+            bordercolor="#14243a",
+            font=dict(color="#ffffff", family="Inter, Segoe UI, sans-serif"),
+        ),
+    )
+    fig.update_xaxes(
+        gridcolor="#e8eef4",
+        linecolor="#d8e2eb",
+        zerolinecolor="#d8e2eb",
+        tickfont=dict(color="#64748b"),
+        title_font=dict(color="#52647a"),
+    )
+    fig.update_yaxes(
+        gridcolor="#e8eef4",
+        linecolor="#d8e2eb",
+        zerolinecolor="#d8e2eb",
+        tickfont=dict(color="#64748b"),
+        title_font=dict(color="#52647a"),
+    )
+    return fig
+
+
 CLASS_COLORS = ("#2563eb", "#dc2626")  # blue = class A, red = class B
 RAW_COLOR = "#9ca3af"
 
@@ -94,12 +126,12 @@ def add_topomap(fig, xy, values, names, row=None, col=None, selected=None,
                              contours=dict(coloring="none"), ncontours=8,
                              line=dict(color="rgba(0,0,0,0.25)", width=1),
                              showlegend=False), **kw)
-    sizes = [14 if n == selected else 7 for n in names]
+    sizes = [18 if n == selected else 10 for n in names]
     colors = ["#facc15" if n == selected else "#111827" for n in names]
     fig.add_trace(go.Scatter(
         x=xy[:, 0], y=xy[:, 1], mode="markers+text" if show_names else "markers",
         text=names if show_names else None, textposition="top center",
-        textfont=dict(size=9, color="#111827"),
+        textfont=dict(size=11, color="#111827"),
         marker=dict(size=sizes, color=colors, line=dict(color="white", width=1)),
         customdata=names,
         hovertemplate=[f"<b>{n}</b><br>{v:.2f} {unit}<extra></extra>"
@@ -109,7 +141,7 @@ def add_topomap(fig, xy, values, names, row=None, col=None, selected=None,
 
 
 def topomap_figure(xy, values, names, title, unit="", selected=None,
-                   symmetric=True, height=470):
+                   symmetric=True, height=650):
     fig = go.Figure()
     lim = add_topomap(fig, xy, values, names, selected=selected, unit=unit,
                       symmetric=symmetric)
@@ -118,8 +150,8 @@ def topomap_figure(xy, values, names, title, unit="", selected=None,
         margin=dict(l=10, r=10, t=45, b=10), shapes=_head_shapes(lim),
         xaxis=dict(visible=False, range=[-lim - 0.15, lim + 0.15], scaleanchor="y"),
         yaxis=dict(visible=False, range=[-lim - 0.1, lim + 0.2]),
-        plot_bgcolor="white")
-    return fig
+        plot_bgcolor="#ffffff")
+    return _style_figure(fig)
 
 
 def topomap_grid(xy, maps, names, titles, unit="a.u.", cols=4, height=260):
@@ -141,10 +173,10 @@ def topomap_grid(xy, maps, names, titles, unit="a.u.", cols=4, height=260):
         fig.update_xaxes(visible=False, range=[-lim - 0.15, lim + 0.15], row=r, col=c,
                          scaleanchor=yref)
         fig.update_yaxes(visible=False, range=[-lim - 0.1, lim + 0.2], row=r, col=c)
-    fig.update_layout(shapes=shapes, height=height * rows, plot_bgcolor="white",
+    fig.update_layout(shapes=shapes, height=height * rows, plot_bgcolor="#ffffff",
                       margin=dict(l=10, r=10, t=40, b=10), showlegend=False)
     fig.update_annotations(font_size=12)
-    return fig
+    return _style_figure(fig)
 
 
 # --------------------------------------------------------------------------
@@ -177,8 +209,8 @@ def signal_figure(times, before, after, env_times, env_a, env_b, class_names,
     fig.update_yaxes(title_text="% of baseline" if env_times[0] < 0 else "power", row=2, col=1)
     fig.update_xaxes(title_text="Time from cue (s)", row=2, col=1)
     fig.update_layout(height=height, margin=dict(l=10, r=10, t=45, b=10),
-                      legend=dict(orientation="h", y=-0.18), plot_bgcolor="white")
-    return fig
+                      legend=dict(orientation="h", y=-0.18), plot_bgcolor="#ffffff")
+    return _style_figure(fig)
 
 
 def spectrum_figure(X_a, X_b, sfreq, class_names, channel, band, height=300):
@@ -196,9 +228,9 @@ def spectrum_figure(X_a, X_b, sfreq, class_names, channel, band, height=300):
                                  font=dict(size=14)),
                       xaxis=dict(title="Frequency (Hz)", range=[1, min(45, sfreq / 2)]),
                       yaxis=dict(title="Power (dB)"), height=height,
-                      margin=dict(l=10, r=10, t=45, b=10), plot_bgcolor="white",
+                      margin=dict(l=10, r=10, t=45, b=10), plot_bgcolor="#ffffff",
                       legend=dict(orientation="h", y=1.12, x=0.6))
-    return fig
+    return _style_figure(fig)
 
 
 def csp_scatter(feats, y, class_names, height=380):
@@ -210,8 +242,8 @@ def csp_scatter(feats, y, class_names, height=380):
     fig.update_layout(title=dict(text="Each dot is one trial: log-variance of CSP 1 vs CSP 2",
                                  font=dict(size=14)),
                       xaxis_title="CSP 1 (log variance)", yaxis_title="CSP 2 (log variance)",
-                      height=height, margin=dict(l=10, r=10, t=45, b=10), plot_bgcolor="white")
-    return fig
+                      height=height, margin=dict(l=10, r=10, t=45, b=10), plot_bgcolor="#ffffff")
+    return _style_figure(fig)
 
 
 def accuracy_bar(labels, csp_acc, chan_acc, chance, height=360):
@@ -222,5 +254,5 @@ def accuracy_bar(labels, csp_acc, chan_acc, chance, height=360):
                   annotation_text=f"chance (p<0.05) = {chance:.2f}")
     fig.update_layout(barmode="group", yaxis=dict(range=[0, 1], title="CV accuracy"),
                       height=height, margin=dict(l=10, r=10, t=30, b=10),
-                      legend=dict(orientation="h", y=1.12), plot_bgcolor="white")
-    return fig
+                      legend=dict(orientation="h", y=1.12), plot_bgcolor="#ffffff")
+    return _style_figure(fig)

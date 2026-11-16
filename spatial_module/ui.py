@@ -154,7 +154,7 @@ def _on_params_upload():
 def _sidebar():
     """All user controls. Returns (epochs or None, data_key, params dict)."""
     sb = st.sidebar
-    sb.header("1 · Data")
+    sb.header("01  ·  EEG DATA")
     src = sb.radio("Source", SOURCES, key="src")
     params = dict(synthetic=None, eegbci_subject=None, upload_name=None,
                   class_a=None, class_b=None)
@@ -234,7 +234,7 @@ def _sidebar():
         return None, None, params
 
     names = epochs.ch_names
-    sb.header("2 · Reference / spatial filter")
+    sb.header("02  ·  REFERENCE & FILTER")
     ref = sb.selectbox("Scheme", P.REFERENCES, key="ref")
     if st.session_state.ref_ch not in names:
         st.session_state.ref_ch = "Cz" if "Cz" in names else names[0]
@@ -243,7 +243,7 @@ def _sidebar():
     nbrs = sb.slider("Laplacian neighbours", 3, 8, key="nbrs",
                      disabled=ref != "Hjorth Laplacian")
 
-    sb.header("3 · Frequency band & time window")
+    sb.header("03  ·  FREQUENCY & TIME")
     sb.selectbox("Band preset", list(P.BAND_PRESETS), key="band_preset", on_change=_on_preset)
     nyq = float(epochs.info["sfreq"]) / 2 - 1
     lo, hi = sb.slider("Band (Hz)", 1.0, min(45.0, nyq), step=0.5, key="band",
@@ -256,10 +256,10 @@ def _sidebar():
         st.session_state.win = (max(t0, 0.5 if t1 > 0.6 else t0), min(t1, 3.0))
     tmin, tmax = sb.slider("Analysis window (s from cue)", t0, t1, step=0.1, key="win")
 
-    sb.header("4 · Topomap")
+    sb.header("04  ·  SCALP TOPOGRAPHY")
     metric_label = sb.selectbox("Show", list(METRICS), key="metric")
 
-    sb.header("5 · CSP")
+    sb.header("05  ·  CSP SETTINGS")
     sets = ["All channels", "Sensorimotor strip", "Custom"]
     csp_set = sb.radio("Channels for CSP", sets, key="csp_set", horizontal=True)
     if csp_set == "All channels":
@@ -313,12 +313,18 @@ def _topography_tab(epochs, key, params, ctx):
         st.session_state.sel_ch = "C3" if "C3" in names else names[0]
     sel = st.session_state.sel_ch
 
-    left, right = st.columns([1, 1.15], gap="medium")
+    left, right = st.columns([1.10, 1.00], gap="large")
     with left:
+        st.caption("Scalp distribution · select an electrode to inspect its signal")
         title = f"{label} · {lo:g}-{hi:g} Hz · {tmin:g}-{tmax:g} s"
         if metric == "difference":
             title = f"{classes[0]} vs {classes[1]} power (dB) · {lo:g}-{hi:g} Hz"
-        fig = PL.topomap_figure(xy, values, names, title, unit=unit, selected=sel)
+        fig = PL.topomap_figure(
+    xy, values, names, title,
+    unit=unit,
+    selected=sel,
+    height=520
+)
         event = st.plotly_chart(fig, key="topo", on_select="rerun",
                                 selection_mode=("points",), width="stretch",
                                 config={"displayModeBar": False})
@@ -362,7 +368,8 @@ def _topography_tab(epochs, key, params, ctx):
             ba, bb = env[y == 0][:, base].mean(), env[y == 1][:, base].mean()
             ea, eb = 100 * ea / ba, 100 * eb / bb
         st.plotly_chart(PL.signal_figure(times, before, after, env_t, ea, eb, classes, sel,
-                                         (tmin, tmax), unit_after, ref_label=ref.split(" (")[0]),
+                                         (tmin, tmax), unit_after,
+                                         ref_label=ref.split(" (")[0], height=420),
                         width="stretch", key="sig")
 
     Xw, _ = P.crop(Xr[:, ci, :], times, tmin, tmax)
@@ -481,20 +488,216 @@ def _export_tab(params):
         st.error(st.session_state.params_error)
 
 
+
+def _apply_theme():
+    """Apply the visual theme without changing analysis behaviour."""
+    st.markdown(
+        """
+        <style>
+        :root {
+            --bci-ink: #14243a;
+            --bci-muted: #64748b;
+            --bci-teal: #0e9f9a;
+            --bci-cyan: #20b8c5;
+            --bci-line: #dce6ef;
+            --bci-panel: #ffffff;
+            --bci-bg: #f3f7fb;
+        }
+        .stApp {
+            background: var(--bci-bg);
+            color: var(--bci-ink);
+        }
+        [data-testid="stHeader"] {
+            background: rgba(243, 247, 251, 0.92);
+        }
+        [data-testid="stAppViewContainer"] > .main .block-container {
+            max-width: 1500px;
+            padding-top: 2rem;
+            padding-bottom: 3rem;
+        }
+        [data-testid="stSidebar"] {
+            background: #edf3f8;
+            border-right: 1px solid var(--bci-line);
+        }
+        [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+            gap: 0.8rem;
+        }
+        h1, h2, h3 {
+            color: var(--bci-ink);
+            letter-spacing: -0.035em;
+        }
+        h1 { font-weight: 750 !important; }
+        h2, h3 { font-weight: 680 !important; }
+        [data-testid="stMarkdownContainer"] p,
+        [data-testid="stCaptionContainer"] {
+            color: #52647a;
+        }
+        [data-testid="stTabs"] [data-baseweb="tab-list"] {
+            gap: 0.45rem;
+            border-bottom: 1px solid var(--bci-line);
+        }
+        [data-testid="stTabs"] button[role="tab"] {
+            background: transparent;
+            border-radius: 10px 10px 0 0;
+            padding: 0.75rem 1rem;
+            color: #53657a;
+            font-weight: 600;
+        }
+        [data-testid="stTabs"] button[aria-selected="true"] {
+            color: #087f86;
+            border-bottom: 3px solid var(--bci-teal);
+        }
+        [data-testid="stMetric"] {
+            background: var(--bci-panel);
+            border: 1px solid var(--bci-line);
+            border-radius: 14px;
+            padding: 1rem 1.1rem;
+            box-shadow: 0 3px 12px rgba(24, 52, 78, 0.045);
+        }
+        [data-testid="stMetricLabel"] {
+            color: var(--bci-muted);
+            font-weight: 600;
+        }
+        [data-testid="stMetricValue"] {
+            color: var(--bci-ink);
+            font-weight: 750;
+        }
+        [data-testid="stPlotlyChart"] {
+            background: var(--bci-panel);
+            border: 1px solid var(--bci-line);
+            border-radius: 14px;
+            padding: 0.35rem;
+            box-shadow: 0 3px 12px rgba(24, 52, 78, 0.035);
+        }
+        [data-testid="stVerticalBlock"] > [data-testid="stHorizontalBlock"] {
+            gap: 1rem;
+        }
+        .stButton > button, .stDownloadButton > button {
+            border-radius: 10px;
+            border: 1px solid #b8d3dc;
+            font-weight: 650;
+            transition: all 120ms ease-in-out;
+        }
+        .stButton > button[kind="primary"],
+        .stDownloadButton > button[kind="primary"] {
+            background: var(--bci-teal);
+            border-color: var(--bci-teal);
+            color: white;
+        }
+        .stButton > button:hover, .stDownloadButton > button:hover {
+            border-color: var(--bci-teal);
+            color: #087f86;
+        }
+        [data-testid="stExpander"] {
+            border: 1px solid var(--bci-line);
+            border-radius: 12px;
+            background: rgba(255,255,255,0.72);
+        }
+        [data-testid="stAlert"] {
+            border-radius: 12px;
+        }
+        .bci-hero {
+            position: relative;
+            overflow: hidden;
+            padding: 1.35rem 1.6rem;
+            margin: 0.15rem 0 1.15rem 0;
+            border: 1px solid #d7e7ef;
+            border-radius: 18px;
+            background: linear-gradient(115deg, #ffffff 0%, #f0faff 58%, #e8f7f7 100%);
+            box-shadow: 0 5px 18px rgba(24, 52, 78, 0.055);
+        }
+        .bci-hero:after {
+            content: "";
+            position: absolute;
+            width: 230px;
+            height: 230px;
+            right: -75px;
+            top: -125px;
+            border: 1px solid rgba(14,159,154,0.18);
+            border-radius: 50%;
+            box-shadow: 0 0 0 22px rgba(14,159,154,0.035),
+                        0 0 0 48px rgba(14,159,154,0.025);
+        }
+        .bci-kicker {
+            color: #087f86;
+            text-transform: uppercase;
+            letter-spacing: 0.13em;
+            font-size: 0.72rem;
+            font-weight: 750;
+            margin-bottom: 0.4rem;
+        }
+        .bci-title {
+            color: #14243a;
+            font-size: clamp(1.8rem, 3vw, 2.5rem);
+            font-weight: 800;
+            letter-spacing: -0.045em;
+            line-height: 1.1;
+            margin: 0;
+        }
+        .bci-subtitle {
+            color: #52647a;
+            font-size: 0.98rem;
+            margin-top: 0.65rem;
+            max-width: 850px;
+        }
+        .bci-status {
+            display: inline-block;
+            margin-top: 0.9rem;
+            padding: 0.28rem 0.65rem;
+            border: 1px solid #c6e8e4;
+            border-radius: 999px;
+            background: #effbf9;
+            color: #087f75;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
 def render():
     """Draw the full module. Safe to call from a multi-page course app."""
     _init_state()
-    st.title("🧠 Spatial analysis")
-    st.markdown("Where on the scalp does a brain signal live, and how should channels be "
-                "combined to bring it out? Change the reference, band and window in the "
-                "sidebar. Every plot updates live.")
+    _apply_theme()
+    st.markdown(
+        """
+        <section class="bci-hero">
+          <div class="bci-kicker">SYNAPSE · BRAIN–COMPUTER INTERFACE</div>
+          <h1 class="bci-title">🧠 EEG Spatial Analysis</h1>
+          <div class="bci-subtitle">
+            Explore how brain signals are distributed across the scalp.
+            Compare referencing methods, frequency bands and spatial filters.
+          </div>
+          <span class="bci-status">● EEG analysis workspace</span>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
     epochs, key, params = _sidebar()
     if epochs is None:
         st.info("Choose or upload a dataset in the sidebar to begin.")
         return
     classes = list(epochs.event_id)
-    st.caption(f"**Data:** {len(epochs)} trials · {len(epochs.ch_names)} EEG channels · "
-               f"{epochs.info['sfreq']:g} Hz · classes: {classes[0]} vs {classes[1]}")
+    st.markdown(
+        f"""
+        <div style="display:flex; flex-wrap:wrap; gap:0.55rem; margin:0.25rem 0 1.15rem 0;">
+          <span style="background:#e7f3f8;color:#31566b;padding:0.38rem 0.7rem;border-radius:8px;font-size:0.82rem;">
+            <b>{len(epochs)}</b> trials
+          </span>
+          <span style="background:#e7f3f8;color:#31566b;padding:0.38rem 0.7rem;border-radius:8px;font-size:0.82rem;">
+            <b>{len(epochs.ch_names)}</b> EEG channels
+          </span>
+          <span style="background:#e7f3f8;color:#31566b;padding:0.38rem 0.7rem;border-radius:8px;font-size:0.82rem;">
+            <b>{epochs.info['sfreq']:g} Hz</b> sampling rate
+          </span>
+          <span style="background:#eaf8f5;color:#087f75;padding:0.38rem 0.7rem;border-radius:8px;font-size:0.82rem;">
+            {classes[0]} vs {classes[1]}
+          </span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
     ctx: dict = {}
     t1, t2, t3, t4 = st.tabs(["① Topography & signals", "② CSP spatial filters",
                               "③ Explain & quiz", "④ Export"])

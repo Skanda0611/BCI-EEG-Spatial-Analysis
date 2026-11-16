@@ -215,26 +215,66 @@ def load_uploaded(file_bytes: bytes, filename: str):
         return mne.io.read_raw(path, preload=True, verbose=False)
 
 
+
 def ensure_positions(inst):
     """Keep EEG channels only and make sure each has a scalp position."""
     inst = inst.copy()
-    eeg_like = [ch for ch, kind in zip(inst.ch_names, inst.get_channel_types())
-                if kind == "eeg"]
+
+    # Keep EEG channels only
+    eeg_like = [
+        ch for ch, kind in zip(inst.ch_names, inst.get_channel_types())
+        if kind == "eeg"
+    ]
+
     if not eeg_like:
         raise ValueError("No EEG channels found in this file.")
+
     inst.pick(eeg_like)
-    has_pos = [ch["loc"][:3] for ch in inst.info["chs"]]
-    if not any(np.any(np.nan_to_num(p) != 0) for p in has_pos):
-        inst.set_montage(standard_montage(), match_case=False, on_missing="ignore")
-    good = [ch["ch_name"] for ch in inst.info["chs"]
-            if np.all(np.isfinite(ch["loc"][:3])) and np.any(ch["loc"][:3] != 0)]
+
+    # Normalise channel names before applying the montage
+    montage = standard_montage()
+    montage_names = {
+        name.lower(): name for name in montage.ch_names
+    }
+
+    rename_mapping = {}
+
+    for old_name in inst.ch_names:
+        clean_name = old_name.strip().rstrip(".").strip()
+        standard_name = montage_names.get(clean_name.lower())
+
+        if standard_name:
+            rename_mapping[old_name] = standard_name
+
+    if rename_mapping:
+        inst.rename_channels(rename_mapping)
+
+    # Apply standard electrode positions
+    inst.set_montage(
+        montage,
+        match_case=False,
+        on_missing="ignore"
+    )
+
+    # Retain channels with valid electrode positions
+    good = [
+        ch["ch_name"]
+        for ch in inst.info["chs"]
+        if (
+            np.all(np.isfinite(ch["loc"][:3]))
+            and np.any(ch["loc"][:3] != 0)
+        )
+    ]
+
     if len(good) < 8:
         raise ValueError(
-            "Fewer than 8 EEG channels have known 10-20 positions. Rename channels "
-            "to standard 10-20 names (e.g. C3, Cz, C4) or include a montage in the file."
+            f"Fewer than 8 EEG channels have known 10-20 positions. "
+            f"Only {len(good)} channels were recognised."
         )
+
     inst.pick(good)
     return inst
+
 
 
 def event_labels(raw: mne.io.BaseRaw) -> dict[str, int]:
