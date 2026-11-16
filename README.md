@@ -14,7 +14,7 @@ An interactive Streamlit module that teaches **spatial analysis of EEG**: why th
 
 ### Prerequisites
 
-- Python 3.10–3.13
+- Python 3.10–3.14
 - Git
 - Internet connection for cloning the repository and downloading dependencies
 
